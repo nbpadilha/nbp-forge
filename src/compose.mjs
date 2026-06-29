@@ -52,9 +52,23 @@ const splitFm = (txt) => {
   const m = txt.match(/^---[ \t]*\n([\s\S]*?)\n---[ \t]*\n?([\s\S]*)$/);
   return { fm: m ? m[1] : null, body: m ? m[2] : txt };
 };
+// Split on ';' separators, honoring backslash escapes so a value can hold a literal ';'.
+// `\;` → literal ';' · `\\` → literal '\' · any other '\x' is left untouched.
+const splitParams = (raw) => {
+  const parts = [];
+  let cur = "";
+  for (let i = 0; i < raw.length; i++) {
+    const c = raw[i];
+    if (c === "\\" && (raw[i + 1] === ";" || raw[i + 1] === "\\")) cur += raw[++i]; // unescape
+    else if (c === ";") { parts.push(cur); cur = ""; }
+    else cur += c;
+  }
+  parts.push(cur);
+  return parts;
+};
 const parseParams = (raw) => {
   const out = {};
-  if (raw) for (const part of raw.split(";")) {
+  if (raw) for (const part of splitParams(raw)) {
     const s = part.trim(); if (!s) continue;
     const i = s.indexOf("=");
     out[i < 0 ? s : s.slice(0, i).trim()] = i < 0 ? "" : s.slice(i + 1).trim();

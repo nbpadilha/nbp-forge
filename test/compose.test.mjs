@@ -31,6 +31,32 @@ test("build: include with params (`;` separator, spaces in value) and {{var}} su
   } finally { cleanup(root); }
 });
 
+test("build: a literal `;` in a value survives via backslash escape (\\;)", () => {
+  const root = makeRoot({
+    bricks: { rule: "Rule: {{expr}}. Skill: {{skill}}." },
+    recipes: { esc: "---\nname: esc\n---\n# esc\n\n<!-- include: rule | expr=a\\; b\\; c; skill=fix -->\n" },
+  });
+  try {
+    const r = run({ root, mode: "build" });
+    assert.equal(r.ok, true, r.errors?.join("; "));
+    const txt = read(outFile(root, "esc"));
+    // `;` stays inside the value; the unescaped `;` still separates expr from skill.
+    assert.match(txt, /Rule: a; b; c\. Skill: fix\./);
+  } finally { cleanup(root); }
+});
+
+test("build: a literal backslash is written via `\\\\`", () => {
+  const root = makeRoot({
+    bricks: { p: "Path {{p}}." },
+    recipes: { bs: "---\nname: bs\n---\n# bs\n\n<!-- include: p | p=a\\\\b -->\n" },
+  });
+  try {
+    const r = run({ root, mode: "build" });
+    assert.equal(r.ok, true, r.errors?.join("; "));
+    assert.match(read(outFile(root, "bs")), /Path a\\b\./);
+  } finally { cleanup(root); }
+});
+
 test("build: missing brick → build error and NOTHING written", () => {
   const root = makeRoot({
     recipes: { x: "---\nname: x\n---\n# x\n\n<!-- include: nope -->\n" },

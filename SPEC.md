@@ -14,6 +14,8 @@ without a recipe is left untouched (and, with `enforceGenerated`, flagged as an 
 ```
 - `<brick-path>` is relative to `bricks/`, without `.md` (can be nested: `core/run-dir`).
 - Parameters after `|`, separated by `;` (a value may contain spaces).
+- A value may contain a **literal `;`** by escaping it as `\;`; a literal backslash is `\\`.
+  (Any other `\x` is left untouched, so Windows-style paths usually need no escaping.)
 - In the brick body, `{{k}}` is replaced by the value. Missing parameter → **build error**
   (nothing is written). Missing brick → **build error**.
 
@@ -38,5 +40,4 @@ A `.gitattributes` with `eol=lf` for `forge/**` and the output dir is recommende
 > Variation between skills is a **parameter** the recipe passes — never a modified copy of the brick.
 
 ## Known limitations
-- The parameter parser splits on `;`; a value containing a literal `;` would be truncated.
-  (TODO: quoting/escaping if a real case appears.)
+- None currently tracked. (A literal `;` in a value is supported via `\;` — see Include directive.)
