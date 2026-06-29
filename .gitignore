@@ -1,3 +1,8 @@
 node_modules/
 *.log
 .DS_Store
+
+# Claude workspace — LOCAL e PRIVADO (repo público; nunca publicar)
+/CLAUDE.md
+.claude-ops/
+.claude/
