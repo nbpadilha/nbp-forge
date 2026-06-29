@@ -50,6 +50,13 @@ npx nbp-forge check  --root .     # drift-gate: exit 1 if anything diverged / or
 ```
 From a clone of this repo, the CLI is `node bin/cli.mjs <cmd>`. A complete runnable project lives in [`examples/`](examples/) — try `npx nbp-forge build --root examples`.
 
+## Pre-commit hook (optional)
+Install a hook that runs the drift-gate **and** a basic secret scan before every commit:
+```bash
+npm run hooks:install        # writes .git/hooks/pre-commit
+```
+It's a **thin shim** that delegates to the versioned [`scripts/hooks/pre-commit`](scripts/hooks/pre-commit) — so the logic is reviewed in git and never drifts from what runs. The hook blocks a commit that (a) stages an env file (`.env`, `.env.local`, `*.env` — templates like `*.example` are allowed), (b) adds a token-shaped string (`ghp_…`, `sk-…`, `npm_…`, AWS keys, private-key headers), or (c) leaves a generated file out of sync with its recipe. The drift-gate runs `forge:check` if your `package.json` defines it, else `npx nbp-forge check` when the repo root is a forge project. Respects `core.hooksPath`. Bypass (discouraged) with `git commit --no-verify`.
+
 ## Full lifecycle (safe by default)
 Skills are generated, so you never hand-edit the output. Manage them through the forge:
 

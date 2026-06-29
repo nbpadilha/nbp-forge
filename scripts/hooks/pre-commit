@@ -1,0 +1,48 @@
+#!/bin/sh
+# nbp-forge pre-commit (VERSIONED source of truth). The .git/hooks/pre-commit is a thin
+# shim that delegates here — so this logic is reviewed in git and never drifts. Two gates:
+#   1) secret scan over staged additions (blocks .env files + token-shaped strings)
+#   2) drift-gate (forge check), when this repo is a forge project
+# Bypass with `git commit --no-verify` only if you are certain (discouraged).
+
+fail=0
+
+# ── 1) secret scan ───────────────────────────────────────────────────────────
+# Block committing env files. Read names one-per-line (IFS= read -r tolerates spaces);
+# the `while` runs in a subshell, so we collect hits via its stdout, not a shared var.
+# Match on the BASENAME so .env / .env.local / prod.env / secrets.env.bak are all caught,
+# while templates (*.example / *.sample / *.template) are allowed.
+env_hits=$(git diff --cached --name-only --diff-filter=ACM | while IFS= read -r f; do
+  base=${f##*/}
+  case "$base" in
+    *.example|*.sample|*.template) ;;
+    .env|.env.*|*.env|*.env.*) echo "$f" ;;
+  esac
+done)
+if [ -n "$env_hits" ]; then
+  echo "✗ refusing to commit env file(s):"; echo "$env_hits" | sed 's/^/    /'
+  fail=1
+fi
+
+# Token-shaped strings in ADDED lines (skip the +++ file headers).
+patterns='(gh[pousr]_[A-Za-z0-9]{30,})|(sk-[A-Za-z0-9]{20,})|(npm_[A-Za-z0-9]{30,})|(AKIA[0-9A-Z]{16})|(-----BEGIN [A-Z ]*PRIVATE KEY-----)'
+hits=$(git diff --cached --no-color -U0 | grep -E '^\+' | grep -Ev '^\+\+\+' | grep -En "$patterns" 2>/dev/null || true)
+if [ -n "$hits" ]; then
+  echo "✗ possible secret in staged changes:"
+  echo "$hits" | head -10
+  fail=1
+fi
+
+# ── 2) drift-gate ────────────────────────────────────────────────────────────
+# Prefer a repo-defined `forge:check` script (lets a repo point check at a sub-root);
+# else, if the repo root is itself a forge project, run the published CLI.
+if grep -q '"forge:check":' package.json 2>/dev/null; then
+  npm run -s forge:check || fail=1
+elif [ -f forge.config.json ]; then
+  npx --no-install nbp-forge check || fail=1
+fi
+
+if [ "$fail" -ne 0 ]; then
+  echo "pre-commit blocked (nbp-forge)."
+  exit 1
+fi

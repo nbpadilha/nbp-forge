@@ -7,7 +7,9 @@
   "scripts": {
     "build": "node bin/cli.mjs build",
     "check": "node bin/cli.mjs check",
-    "test": "node --test"
+    "test": "node --test",
+    "forge:check": "node bin/cli.mjs check --root examples",
+    "hooks:install": "node scripts/install-hooks.mjs"
   },
   "keywords": ["agent-skills", "skill.md", "composition", "drift-gate", "claude-code"],
   "author": "Nikolas Padilha (nbp)",
