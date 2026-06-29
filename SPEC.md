@@ -35,6 +35,10 @@ A `.gitattributes` with `eol=lf` for `forge/**` and the output dir is recommende
 - `remove` soft-deletes the recipe + the skill's exclusively-owned bricks to `archive/`.
   `restore` brings them back. `gc` archives orphan bricks (ref-count 0).
 - `deletePolicy: "soft" | "hard"` controls archive-vs-delete.
+- `init` scaffolds a project: it writes `forge.config.json` only if absent, then seeds a sample
+  skill **only** when there are no recipes yet, the bricks/recipes/out roles are three distinct
+  dirs, and none of the sample's targets already exist — so it is idempotent and never overwrites.
+- `list` is read-only: per skill, the bricks it includes; per brick, its ref-count and consumers.
 
 ## The golden rule
 > Variation between skills is a **parameter** the recipe passes — never a modified copy of the brick.

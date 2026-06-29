@@ -25,6 +25,11 @@ export function makeRoot({ config = {}, recipes = {}, bricks = {}, out = {} } = 
   return root;
 }
 
+// A bare temp root with NO forge.config.json (to exercise default paths / init from scratch).
+export function bareRoot() {
+  return mkdtempSync(join(tmpdir(), "forge-bare-"));
+}
+
 // Write a file, creating parent dirs. Supports nested names like "sub/brick".
 function write(path, text) {
   mkdirSync(dirname(path), { recursive: true });

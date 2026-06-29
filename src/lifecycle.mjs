@@ -2,8 +2,8 @@
 // Ref-counted soft-delete: removing a skill archives its recipe + the bricks it EXCLUSIVELY owns
 // (ref-count would drop to 0); shared bricks stay. Everything is recoverable (versioned).
 
-import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync, rmSync, renameSync } from "node:fs";
-import { join, dirname, basename } from "node:path";
+import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync, rmSync, renameSync, realpathSync } from "node:fs";
+import { join, dirname, basename, relative, resolve } from "node:path";
 import { loadConfig, run, includesOf, brickConsumers } from "./compose.mjs";
 
 const mdFiles = (dir) =>
@@ -102,6 +102,67 @@ export function gc(root = process.cwd(), { apply = false, hard = false } = {}) {
   }
   return { ok: true, orphans, applied: apply,
     msg: orphans.length ? `${orphans.length} orphan brick(s): ${orphans.join(", ")}${apply ? " — archived" : " (run with --apply to archive)"}` : "no orphan bricks." };
+}
+
+// ── init (scaffold a forge project) ──────────────────────────────────────────
+// Purely additive & idempotent: writes forge.config.json only if absent (never overwrites,
+// so custom config keys are safe), seeds a sample only when there are no recipes yet, and
+// builds only that fresh sample (an already-initialized project is left exactly as-is).
+export function init(root = process.cwd()) {
+  const cfg = loadConfig(root);
+  const P = paths(root, cfg);
+  const created = [];
+  const rel = (p) => relative(root, p).replace(/\\/g, "/");
+
+  const cfgPath = join(root, "forge.config.json");
+  if (!existsSync(cfgPath)) {
+    const { bricks, recipes, out, archive, deletePolicy, enforceGenerated } = cfg;
+    writeFileSync(cfgPath, JSON.stringify({ bricks, recipes, out, archive, deletePolicy, enforceGenerated }, null, 2) + "\n");
+    created.push("forge.config.json");
+  }
+
+  mkdirSync(P.bricks, { recursive: true });
+  mkdirSync(P.recipes, { recursive: true });
+
+  // Seed a sample only when it is provably safe: no recipes yet, bricks/recipes are distinct
+  // dirs, and none of the sample's targets (brick, recipe, built output) already exist — so we
+  // can never overwrite a user's footer brick, hello recipe, or a hand-written hello command.
+  let build = null;
+  const brickPath = join(P.bricks, "footer.md");
+  const recipePath = join(P.recipes, "hello.md");
+  const outPath = join(P.out, "hello.md");
+  const hasRecipes = readdirSync(P.recipes).some((f) => f.endsWith(".md"));
+  // Canonicalize so the bricks/recipes/out roles must be three genuinely distinct dirs
+  // (realpath resolves symlinks, trailing slashes, and case on case-insensitive FS; falls
+  // back to resolve() for a dir that doesn't exist yet). If any two coincide, the build would
+  // treat a brick as a recipe or overwrite a recipe with its output — so skip the sample.
+  const canon = (p) => { try { return realpathSync.native(p); } catch { return resolve(p); } };
+  const distinctRoles = new Set([canon(P.bricks), canon(P.recipes), canon(P.out)]).size === 3;
+  const sampleSafe = !hasRecipes && distinctRoles &&
+    !existsSync(brickPath) && !existsSync(recipePath) && !existsSync(outPath);
+  if (sampleSafe) {
+    writeFileSync(brickPath, `---\npiece: footer\nsummary: shared closing line, parameterized by project\n---\n_Generated for **{{project}}** by nbp-forge — edit the recipe/brick, not this file._\n`);
+    writeFileSync(recipePath, `---\nname: hello\ndescription: sample skill — replace me\n---\n# hello\n\nThis is a sample skill. Reuse shared bricks with an include directive:\n\n<!-- include: footer | project=my-app -->\n`);
+    created.push(rel(brickPath), rel(recipePath));
+    build = run({ root, mode: "build" }); // build only the sample we just seeded
+  }
+
+  return { ok: build ? build.ok : true, created, build, msg:
+    (created.length ? `initialized forge: ${created.join(", ")}` : "forge already initialized (nothing to scaffold)") +
+    `. Edit ${cfg.recipes}/, then \`forge build\`.` };
+}
+
+// ── list (skills → bricks, with ref-count / blast radius) ─────────────────────
+export function list(root = process.cwd()) {
+  const P = paths(root);
+  if (!existsSync(P.recipes)) return { ok: false, msg: `no recipes directory: ${P.cfg.recipes}`, skills: [], bricks: [] };
+  const consumers = brickConsumers(root, P.cfg);
+  const skills = readdirSync(P.recipes).filter((f) => f.endsWith(".md")).map((f) => basename(f, ".md")).sort();
+  const perSkill = skills.map((s) => ({ skill: s, bricks: uniq(includesOf(readFileSync(join(P.recipes, s + ".md"), "utf8"))) }));
+  const bricks = Object.entries(consumers)
+    .map(([brick, set]) => ({ brick, refCount: set.size, usedBy: [...set].sort() }))
+    .sort((a, b) => b.refCount - a.refCount || a.brick.localeCompare(b.brick));
+  return { ok: true, skills: perSkill, bricks, msg: `${skills.length} skill(s), ${bricks.length} brick(s).` };
 }
 
 // ── rename ─────────────────────────────────────────────────────────────────────

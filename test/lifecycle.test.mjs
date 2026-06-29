@@ -1,9 +1,10 @@
 // lifecycle: new / remove / restore / gc / rename — plus ref-counted soft-delete.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { create, remove, restore, gc, rename } from "../src/lifecycle.mjs";
+import { join } from "node:path";
+import { create, remove, restore, gc, rename, init, list } from "../src/lifecycle.mjs";
 import { run } from "../src/compose.mjs";
-import { makeRoot, read, has, recipe, brick, outFile, archived, cleanup } from "./helpers.mjs";
+import { makeRoot, bareRoot, write, read, has, recipe, brick, outFile, archived, cleanup } from "./helpers.mjs";
 
 test("new: scaffolds a recipe and builds without error", () => {
   const root = makeRoot({});
@@ -165,6 +166,79 @@ test("rename: generates the new command and removes the old one", () => {
     assert.equal(has(outFile(root, "newn")), true);
     // The `name:` field inside the recipe is rewritten too.
     assert.match(read(recipe(root, "newn")), /^name:\s*newn\s*$/m);
+  } finally { cleanup(root); }
+});
+
+test("init: scaffolds config + sample skill from a bare dir and builds it", () => {
+  const root = bareRoot(); // no forge.config.json → uses defaults (.claude/forge/...)
+  try {
+    const r = init(root);
+    assert.equal(r.ok, true, r.msg);
+    assert.equal(has(join(root, "forge.config.json")), true);
+    assert.equal(has(join(root, ".claude/forge/recipes/hello.md")), true);
+    assert.equal(has(join(root, ".claude/forge/bricks/footer.md")), true);
+    assert.equal(has(join(root, ".claude/commands/hello.md")), true, "sample is built");
+    assert.ok(r.created.includes("forge.config.json"));
+  } finally { cleanup(root); }
+});
+
+test("init: is idempotent and never clobbers an existing project", () => {
+  const root = makeRoot({
+    bricks: { real: "real body" },
+    recipes: { mine: "---\nname: mine\n---\n# mine\n\n<!-- include: real -->\n" },
+  });
+  try {
+    const r = init(root);
+    assert.equal(r.ok, true, r.msg);
+    // No sample seeded because recipes already exist; the real recipe is untouched.
+    assert.equal(has(recipe(root, "hello")), false, "must not seed a sample over a real project");
+    assert.equal(read(recipe(root, "mine")).includes("include: real"), true);
+    assert.deepEqual(r.created, [], "config already present, recipes present → nothing created");
+  } finally { cleanup(root); }
+});
+
+test("init: never overwrites an existing brick/output when it would seed the sample", () => {
+  const root = bareRoot();
+  try {
+    // User has a footer brick already (mid-setup) but no recipes yet.
+    write(join(root, ".claude/forge/bricks/footer.md"), "MY CUSTOM BRICK");
+    const r = init(root);
+    assert.equal(r.ok, true, r.msg);
+    assert.equal(read(join(root, ".claude/forge/bricks/footer.md")), "MY CUSTOM BRICK", "must not clobber existing brick");
+    assert.equal(has(join(root, ".claude/forge/recipes/hello.md")), false, "skips the sample to stay safe");
+  } finally { cleanup(root); }
+});
+
+test("init: skips the sample when bricks/recipes/out are not three distinct dirs", () => {
+  const root = makeRoot({ config: { out: "recipes" } }); // out aliased onto recipes
+  try {
+    const r = init(root);
+    assert.equal(r.ok, true, r.msg);
+    assert.equal(has(join(root, "recipes/hello.md")), false, "must not seed when roles collide");
+    assert.equal(has(join(root, "bricks/footer.md")), false);
+  } finally { cleanup(root); }
+});
+
+test("list: reports skills→bricks and per-brick ref-count (blast radius)", () => {
+  const root = makeRoot({
+    bricks: { shared: "s", priv: "p" },
+    recipes: {
+      a: "---\nname: a\n---\n# a\n\n<!-- include: shared -->\n<!-- include: priv -->\n",
+      b: "---\nname: b\n---\n# b\n\n<!-- include: shared -->\n",
+    },
+  });
+  try {
+    const r = list(root);
+    assert.equal(r.ok, true);
+    const a = r.skills.find((s) => s.skill === "a");
+    assert.deepEqual([...a.bricks].sort(), ["priv", "shared"]);
+    const shared = r.bricks.find((b) => b.brick === "shared");
+    assert.equal(shared.refCount, 2);
+    assert.deepEqual(shared.usedBy, ["a", "b"]);
+    const priv = r.bricks.find((b) => b.brick === "priv");
+    assert.equal(priv.refCount, 1);
+    // sorted by ref-count desc → shared first
+    assert.equal(r.bricks[0].brick, "shared");
   } finally { cleanup(root); }
 });
 

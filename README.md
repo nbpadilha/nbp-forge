@@ -44,8 +44,10 @@ Two skills, the same brick, different parameters. One source of truth.
 ## Quick start
 Installed from npm (zero runtime dependencies):
 ```bash
+npx nbp-forge init                # scaffold forge.config.json + dirs + a sample skill
 npx nbp-forge build  --root .     # generate skills from recipes + bricks
 npx nbp-forge check  --root .     # drift-gate: exit 1 if anything diverged / orphaned (CI, pre-commit)
+npx nbp-forge help                # all commands; `help <command>` for one
 # or install once: npm i -g nbp-forge  →  nbp-forge build / nbp-forge check
 ```
 From a clone of this repo, the CLI is `node bin/cli.mjs <cmd>`. A complete runnable project lives in [`examples/`](examples/) — try `npx nbp-forge build --root examples`.
@@ -62,6 +64,8 @@ Skills are generated, so you never hand-edit the output. Manage them through the
 
 | Command | What it does |
 |---|---|
+| `forge init` | scaffold `forge.config.json` + dirs + a sample skill (idempotent; never overwrites) |
+| `forge list` | show each skill → the bricks it uses, and per-brick ref-count (blast radius) |
 | `forge new <skill>` | scaffold a new recipe |
 | `forge rename <old> <new>` | rename a skill (regenerates, removes the stale output) |
 | `forge remove <skill>` | **soft-delete** the recipe + the bricks **only that skill owns**; shared bricks stay (you're told which and why) |
