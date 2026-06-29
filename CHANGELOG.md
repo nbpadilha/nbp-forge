@@ -6,6 +6,19 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-06-29
+
+### Added
+- **`forge install-hooks`**: install the pre-commit hook from the CLI — so it works for projects
+  that depend on nbp-forge, not only from a clone. The installed shim delegates to the versioned
+  hook **bundled with the package** (resolves the same from a clone or from `node_modules`),
+  hardened against path-based shell injection and never crashing on filesystem errors.
+- **`AGENTS.md`**: short, public guidance for agents/contributors (distinct from internal notes).
+
+### Changed
+- The published package now ships `scripts/` and `examples/`, so the pre-commit hook and the
+  example CI workflow / Claude Code guard are available to consumers (not clone-only).
+
 ## [0.2.0] - 2026-06-29
 
 ### Added
@@ -45,6 +58,7 @@ First public release (npm).
 - **Test suite** (`node --test`, zero deps) covering the engine, lifecycle, and ref-counting.
 - Documentation: `README.md`, `SPEC.md`, `SETUP.md`, `SECURITY.md`, and a runnable [`examples/`](examples/) project.
 
-[Unreleased]: https://github.com/nbpadilha/nbp-forge/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/nbpadilha/nbp-forge/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/nbpadilha/nbp-forge/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/nbpadilha/nbp-forge/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/nbpadilha/nbp-forge/releases/tag/v0.1.0

@@ -4,6 +4,7 @@
 import { resolve } from "node:path";
 import { run } from "../src/compose.mjs";
 import { create, remove, restore, gc, rename, init, list, importFile } from "../src/lifecycle.mjs";
+import { installHooks } from "../src/hooks.mjs";
 
 const HELP = {
   build:   "build [--root <dir>]                 generate every skill from its recipe + bricks",
@@ -16,13 +17,14 @@ const HELP = {
   remove:  "remove <skill> [--hard] [--root <dir>]   soft-delete (→ _archive) the recipe + exclusive bricks",
   restore: "restore <skill> [--root <dir>]       bring a removed skill (and its bricks) back",
   gc:      "gc [--apply] [--hard] [--root <dir>]  find/archive orphan bricks (ref-count 0)",
+  "install-hooks": "install-hooks [--force] [--root <dir>]  install the pre-commit hook (drift-gate + secret scan)",
   help:    "help [<command>]                     show this help, or detail for one command",
 };
 function usage(cmd) {
   if (cmd && HELP[cmd]) { console.log("forge " + HELP[cmd]); return; }
   console.log("nbp-forge — compose portable agent skills from reusable bricks, with a drift-gate.\n");
   console.log("usage: forge <command> [options]\n");
-  for (const k of ["build", "check", "init", "list", "new", "import", "rename", "remove", "restore", "gc", "help"]) console.log("  " + HELP[k]);
+  for (const k of ["build", "check", "init", "list", "new", "import", "rename", "remove", "restore", "gc", "install-hooks", "help"]) console.log("  " + HELP[k]);
   console.log("\nPaths/options come from forge.config.json at the root (see SPEC.md).");
 }
 
@@ -77,6 +79,7 @@ switch (cmd) {
   case "remove":  finish(remove(pos[1], { root, hard })); break;
   case "restore": finish(restore(pos[1], { root })); break;
   case "gc":      finish(gc(root, { apply, hard })); break;
+  case "install-hooks": finish(installHooks({ root, force })); break;
   case "rename":  finish(rename(pos[1], pos[2], { root })); break;
   case "help":    usage(pos[1]); process.exit(0);
   default:
