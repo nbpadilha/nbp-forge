@@ -61,6 +61,8 @@ npm run hooks:install        # writes .git/hooks/pre-commit
 ```
 It's a **thin shim** that delegates to the versioned [`scripts/hooks/pre-commit`](scripts/hooks/pre-commit) — so the logic is reviewed in git and never drifts from what runs. The hook blocks a commit that (a) stages an env file (`.env`, `.env.local`, `*.env` — templates like `*.example` are allowed), (b) adds a token-shaped string (`ghp_…`, `sk-…`, `npm_…`, AWS keys, private-key headers), or (c) leaves a generated file out of sync with its recipe. The drift-gate runs `forge:check` if your `package.json` defines it, else `npx nbp-forge check` when the repo root is a forge project. Respects `core.hooksPath`. Bypass (discouraged) with `git commit --no-verify`.
 
+More examples to copy into your own repo: a CI workflow that runs the drift-gate ([`examples/.github/workflows/forge-check.yml`](examples/.github/workflows/forge-check.yml)) and an optional Claude Code hook that stops the agent from hand-editing a generated skill ([`examples/claude-code/`](examples/claude-code/)).
+
 ## Full lifecycle (safe by default)
 Skills are generated, so you never hand-edit the output. Manage them through the forge:
 
