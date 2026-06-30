@@ -83,6 +83,10 @@ From a clone of this repo, the CLI is `node bin/cli.mjs <cmd>`. A complete runna
 
 > **CLI-only.** nbp-forge is a command-line tool, not a library: there is no public programmatic API and **no TypeScript types are shipped**. Drive it with the `forge` commands above (or your `package.json` scripts / CI), not via `import`.
 
+> **Setting it up with an agent?** Hand your AI agent [`AGENTS-SETUP.md`](AGENTS-SETUP.md) — an
+> end-to-end, idempotent setup runbook (install → init → author → build → gate → CI) with a
+> verify-by-execution gate after every step, so the whole adoption runs autonomously.
+
 ## Pre-commit hook (optional)
 Install a hook that runs the drift-gate **and** a basic secret scan before every commit:
 ```bash

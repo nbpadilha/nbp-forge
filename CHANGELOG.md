@@ -7,6 +7,10 @@ All notable changes to this project are documented here. The format is based on
 ## [Unreleased]
 
 ### Added
+- **`AGENTS-SETUP.md`** — an autonomous end-to-end setup runbook (master prompt) for an AI agent to
+  adopt nbp-forge in a project: install → init → configure → author/import → build → drift-gate →
+  hooks/CI, with a verify-by-execution gate after each step, embedded anti-destruction guards, and an
+  explicit done-criteria checklist. Linked from the README and `AGENTS.md`.
 - `forge build --dry-run` — composes every skill and prints a per-skill plan
   (`+ create` / `~ change` / `= unchanged`) **without writing anything**, so you can preview a
   recipe/brick edit's blast radius before it touches the tree. A blocking build error still fails.

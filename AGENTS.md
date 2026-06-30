@@ -26,3 +26,5 @@ Composition lives in the recipe; bricks do not include other bricks.
 - [Conventional Commits](https://www.conventionalcommits.org/): `feat` / `fix` / `docs` / `refactor` / `test` / `chore`.
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) for setup details and [`SPEC.md`](SPEC.md) for the format.
+To adopt nbp-forge in **your** project autonomously, hand an agent [`AGENTS-SETUP.md`](AGENTS-SETUP.md)
+— an end-to-end setup runbook with execution gates.
